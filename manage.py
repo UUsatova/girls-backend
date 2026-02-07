@@ -3,7 +3,12 @@ import os
 import sys
 
 def main():
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'girls_backend.settings')
+    settings_module = (
+        'girls_backend.settings_deployment'
+        if 'RENDER_EXTERNAL_HOSTNAME' in os.environ
+        else 'girls_backend.settings'
+    )
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', settings_module)
     try:
         from django.core.management import execute_from_command_line
     except ImportError as exc:

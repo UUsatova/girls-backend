@@ -21,8 +21,9 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -51,12 +52,40 @@ TEMPLATES = [
 WSGI_APPLICATION = 'girls_backend.wsgi.application'
 ASGI_APPLICATION = 'girls_backend.asgi.application'
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+DATABASE_URL = os.getenv('DATABASE_URL')
+
+if DATABASE_URL:
+    try:
+        import dj_database_url
+    except ImportError:
+        dj_database_url = None
+
+    if dj_database_url:
+        DATABASES = {
+            'default': dj_database_url.config(default=DATABASE_URL, conn_max_age=600, ssl_require=False)
+        }
+    else:
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.postgresql',
+                'NAME': os.getenv('POSTGRES_DB', 'girls'),
+                'USER': os.getenv('POSTGRES_USER', 'girls'),
+                'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'girls'),
+                'HOST': os.getenv('POSTGRES_HOST', 'localhost'),
+                'PORT': os.getenv('POSTGRES_PORT', '5432'),
+            }
+        }
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.getenv('POSTGRES_DB', 'girls'),
+            'USER': os.getenv('POSTGRES_USER', 'girls'),
+            'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'girls'),
+            'HOST': os.getenv('POSTGRES_HOST', 'localhost'),
+            'PORT': os.getenv('POSTGRES_PORT', '5432'),
+        }
     }
-}
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -79,6 +108,7 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
