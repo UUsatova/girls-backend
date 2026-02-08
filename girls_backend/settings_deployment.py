@@ -1,74 +1,57 @@
-import os 
-import dj_database_url
-from .settings import * 
-from .settings import BASE_DIR
+import os
 
-ALLOWED_HOSTS = [os.environ.get('RENDER_EXTERNAL_HOSTNAME')]
-CSRF_TRUSTED_ORIGINS = ['https://'+os.environ.get('RENDER_EXTERNAL_HOSTNAME')]
+import dj_database_url
+
+from .settings import *  # noqa: F403,F401
 
 DEBUG = False
-SECRET_KEY = os.environ.get('SECRET_KEY')
 
-MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
+if not SECRET_KEY:
+    raise RuntimeError('DJANGO_SECRET_KEY is required')
+
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.getenv('DJANGO_ALLOWED_HOSTS', '').split(',')
+    if host.strip()
 ]
+if not ALLOWED_HOSTS and os.getenv('RENDER_EXTERNAL_HOSTNAME'):
+    ALLOWED_HOSTS = [os.getenv('RENDER_EXTERNAL_HOSTNAME')]
+if not ALLOWED_HOSTS:
+    raise RuntimeError('DJANGO_ALLOWED_HOSTS is required')
+
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv('CSRF_TRUSTED_ORIGINS', '').split(',')
+    if origin.strip()
+]
+if not CSRF_TRUSTED_ORIGINS and os.getenv('RENDER_EXTERNAL_HOSTNAME'):
+    CSRF_TRUSTED_ORIGINS = [f"https://{os.getenv('RENDER_EXTERNAL_HOSTNAME')}"]
 
 CORS_ALLOWED_ORIGINS = [
-    'https://render-deploy-tutorial-reactjs-code.onrender.com'
+    origin.strip()
+    for origin in os.getenv('CORS_ALLOWED_ORIGINS', '').split(',')
+    if origin.strip()
 ]
 
-STORAGES = {
-    "default":{
-        "BACKEND" : "django.core.files.storage.FileSystemStorage",
-    },
-    "staticfiles": {
-        "BACKEND" : "whitenoise.storage.CompressedStaticFilesStorage",
-    },
-
-}
+DATABASE_URL = os.getenv('DATABASE_URL')
+if not DATABASE_URL:
+    raise RuntimeError('DATABASE_URL is required')
 
 DATABASES = {
-    'default': dj_database_url.config(
-        default= os.environ['DATABASE_URL'], 
-        conn_max_age=600
-    )
+    'default': dj_database_url.config(default=DATABASE_URL, conn_max_age=600, ssl_require=True)
 }
 
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SECURE_SSL_REDIRECT = os.getenv('DJANGO_SECURE_SSL_REDIRECT', '1') == '1'
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
 
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'handlers': {
-        'mail_admins': {
-            'level': 'ERROR',
-            'class': 'django.utils.log.AdminEmailHandler',
-        },
+STORAGES = {
+    'default': {
+        'BACKEND': 'django.core.files.storage.FileSystemStorage',
     },
-    'loggers': {
-        'django': {
-            'handlers': ['mail_admins'],
-            'level': 'ERROR',
-            'propagate': True,
-        },
+    'staticfiles': {
+        'BACKEND': 'whitenoise.storage.CompressedStaticFilesStorage',
     },
 }
-
-
-
-ADMINS = [("CBI Analytics", "YOUREMAIL@EMAIL.com")]
-
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = os.environ.get('EMAIL_USER')
-EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_PASSWORD')
-DEFAULT_FROM_EMAIL = 'default from email'
